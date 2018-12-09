@@ -2,7 +2,6 @@ package readtemperature
 
 import (
 	"bytes"
-	"os/exec"
 	"regexp"
 	"strconv"
 )
@@ -13,7 +12,7 @@ type TemperatureInfo struct {
 }
 
 func GetTemp() (TemperatureInfo, error) {
-	cmd := exec.Command(ReadTemperatureExecutableFQP())
+	cmd := ReadTemperatureExecutableCommand()
 
 	result := TemperatureInfo{
 		Value:  -1,
