@@ -1,37 +1,54 @@
 package main
 
 import (
+	"os"
+	"os/signal"
 	"pitemp/logging"
 	"pitemp/readtemperature"
-	"sync"
+	"syscall"
 	"time"
 )
 import "go.uber.org/zap"
 
 var logger = logging.New("pitemp", false)
-var allJobsDone = &sync.WaitGroup{}
+var temperatureInfoChannel = make(chan readtemperature.TemperatureInfo)
 
 func main(){
 	logger.Info("### STARTUP")
 
-	allJobsDone.Add(1)
-	go loopedTemperatureRead("go")
+	go loopedTemperatureRead()
+	go temperaturePrinter()
 
-	allJobsDone.Wait()
+	// wait indefinately until external abortion
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)	// Ctrl + c
+	<-sigs
 	logger.Info("### EXIT")
 }
 
-func loopedTemperatureRead(foo string) {
-	logger.Info("IN:  %s", zap.String("foo", foo))
-	defer allJobsDone.Done()
-
+func temperaturePrinter() {
 	for {
-		info, err := readtemperature.GetTemp()
-		if err==nil {
-			logger.Info("Current Temperature: ", zap.String("Unit", info.Unit), zap.Float32("Value", info.Value));
-		}
-		time.Sleep(time.Second)
+		info := <- temperatureInfoChannel
+		logger.Info("Current Temperature: ", zap.String("Unit", info.Unit), zap.Float32("Value", info.Value));
 	}
-	logger.Info("OUT: %s", zap.String("foo", foo))
 }
 
+func temperatureRead() {
+	info, err := readtemperature.GetTemp()
+	if err==nil {
+		//logger.Info("Current Temperature: ", zap.String("Unit", info.Unit), zap.Float32("Value", info.Value));
+		temperatureInfoChannel <- info
+	} else {
+		logger.Error("Could not read temperature: ", zap.Error(err))
+	}
+
+}
+
+func loopedTemperatureRead() {
+	for {
+		select {
+		case <-time.After(1 * time.Second):
+			temperatureRead()
+		}
+	}
+}
