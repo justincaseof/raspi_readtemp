@@ -1,22 +1,26 @@
 package main
 
 import (
-	"log"
+	"pitemp/logging"
 	"pitemp/readtemperature"
+	"time"
 )
 import "go.uber.org/zap"
 
+var logger = logging.New("pitemp", false)
+
 func main(){
-	logger, err := zap.NewProduction()
-	if err != nil {
-		log.Fatalf("can't initialize zap logger: %v", err)
+	logger.Info("### STARTUP")
+	loopedTemperatureRead()
+}
+
+func loopedTemperatureRead() {
+	for {
+		info, err := readtemperature.GetTemp()
+		if err==nil {
+			logger.Info("Current Temperature: ", zap.String("Unit", info.Unit), zap.Float32("Value", info.Value));
+		}
+		time.Sleep(time.Second)
 	}
-	defer logger.Sync()
-
-	info, _ := readtemperature.GetTemp()
-
-	logger.Info("Current Temperature: ", zap.String("Unit", info.Unit), zap.Float32("Value", info.Value) );
-
-
 }
 
