@@ -35,9 +35,14 @@ func main(){
 func temperaturePrinter() {
 	for {
 		info := <- temperatureInfoChannel
+
 		logger.Info("Current Temperature: ", zap.String("Unit", info.Unit), zap.Float32("Value", info.Value));
+
+		database.InsertMeasurement(info)
 	}
 }
+
+
 
 func temperatureRead() {
 	info, err := readtemperature.GetTemp()

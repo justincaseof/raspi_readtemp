@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"pitemp/logging"
@@ -25,6 +27,11 @@ type DBConfig struct {
 	Password string `yaml:"password"`
 }
 
+type IInserteableMeasurement interface {
+	InserteableMeasurementValue() float32
+	InserteableMeasurementUnit()  string
+}
+
 var tableIdentifier string
 var dbconfig DBConfig
 var mydb *sql.DB
@@ -40,6 +47,16 @@ func Close() {
 	if mydb != nil {
 		mydb.Close()
 	}
+}
+
+func InsertMeasurement(measurement IInserteableMeasurement) (error) {
+	log.Info("Inserting meaurement ...",
+		zap.Float32("value", measurement.InserteableMeasurementValue()),
+		zap.String("unit", measurement.InserteableMeasurementUnit()) )
+
+
+
+	return errors.New("Could not insert measurement")
 }
 
 func initDatabase(tableIdentifierArg string) {

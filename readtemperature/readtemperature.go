@@ -11,6 +11,13 @@ type TemperatureInfo struct {
 	Unit string
 }
 
+func (info TemperatureInfo) InserteableMeasurementValue() float32 {
+	return info.Value
+}
+func (info TemperatureInfo) InserteableMeasurementUnit() string {
+	return info.Unit
+}
+
 func GetTemp() (TemperatureInfo, error) {
 	cmd := ReadTemperatureExecutableCommand()
 
