@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/signal"
+	"pitemp/database"
 	"pitemp/logging"
 	"pitemp/readtemperature"
 	"syscall"
@@ -16,6 +17,11 @@ var temperatureInfoChannel = make(chan readtemperature.TemperatureInfo)
 func main(){
 	logger.Info("### STARTUP")
 
+	// INIT
+	database.Open("lala123")
+	defer database.Close()
+
+	// GO
 	go loopedTemperatureRead()
 	go temperaturePrinter()
 

@@ -19,6 +19,10 @@ type Logger struct {
 	logger *zap.Logger
 }
 
+func NewDevLog(prefix string) *zap.Logger {
+	return New(prefix, false)
+}
+
 func New(prefix string, isProduction bool) *zap.Logger {
 	var err error = nil
 	var logger *zap.Logger = nil
