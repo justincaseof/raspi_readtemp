@@ -25,7 +25,7 @@ func main(){
 	go loopedTemperatureRead()
 	go temperaturePrinter()
 
-	// wait indefinately until external abortion
+	// wait indefinitely until external abortion
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)	// Ctrl + c
 	<-sigs
