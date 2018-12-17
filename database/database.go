@@ -81,32 +81,19 @@ func readConfig(dbconfig *DBConfig) {
  */
 func ensureTableExists() {
 	tableName := "raspi_measurements_" + tableIdentifier
-	rows, err := mydb.Query(
-		"CREATE TABLE public." + tableName +
+	_, err := mydb.Exec(
+		"CREATE TABLE IF NOT EXISTS public." + tableName +
 			`(
 			measurement_id serial NOT NULL,
 			measurement_timestamp timestamp with time zone,
 			value numeric NOT NULL,
 			unit character varying(255) NOT NULL,
 			PRIMARY KEY (measurement_id)
-		)
-		WITH (
+		) WITH (
 			OIDS = FALSE
 		);
 	`)
 	if err != nil {
 		log.Error("Error executing CREATE TABLE statement")
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		err := rows.Scan()
-		if err != nil {
-			panic(err)
-		}
-	}
-	err = rows.Err()
-	if err != nil {
-		panic(err)
 	}
 }
