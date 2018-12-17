@@ -50,13 +50,30 @@ func Close() {
 }
 
 func InsertMeasurement(measurement IInserteableMeasurement) (error) {
-	log.Info("Inserting meaurement ...",
+	log.Debug("Inserting meaurement ...",
 		zap.Float32("value", measurement.InserteableMeasurementValue()),
 		zap.String("unit", measurement.InserteableMeasurementUnit()) )
 
+	tableName := "raspi_measurements_" + tableIdentifier
 
+	statement := "INSERT INTO public." + tableName + " (measurement_timestamp, value, unit) " +
+				 "VALUES (current_timestamp, $1, $2) RETURNING measurement_id"
+	stmt, err := mydb.Prepare(statement)
+	defer stmt.Close()
+	if err != nil {
+		// FIXME: log!
+		return err
+	}
+	measurement_id := int64(0)
+	err = stmt.QueryRow(measurement.InserteableMeasurementValue(), measurement.InserteableMeasurementUnit()).Scan(&measurement_id)
+	if (err != nil) {
+		// FIXME: log!
+		return err
+	}
+	log.Info("Inserted measurement",
+		zap.Int64("measurement_id", measurement_id))
 
-	return errors.New("Could not insert measurement")
+	return nil
 }
 
 func initDatabase(tableIdentifierArg string) {
@@ -96,7 +113,7 @@ func readConfig(dbconfig *DBConfig) {
 /**
  tableIdentifier should be the raspi's mac address
  */
-func ensureTableExists() {
+func ensureTableExists() error {
 	tableName := "raspi_measurements_" + tableIdentifier
 	_, err := mydb.Exec(
 		"CREATE TABLE IF NOT EXISTS public." + tableName +
@@ -110,7 +127,11 @@ func ensureTableExists() {
 			OIDS = FALSE
 		);
 	`)
+
 	if err != nil {
 		log.Error("Error executing CREATE TABLE statement")
+		return errors.New("Error executing CREATE TABLE statement")
 	}
+
+	return nil
 }

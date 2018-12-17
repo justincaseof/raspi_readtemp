@@ -38,7 +38,11 @@ func temperaturePrinter() {
 
 		logger.Info("Current Temperature: ", zap.String("Unit", info.Unit), zap.Float32("Value", info.Value));
 
-		database.InsertMeasurement(info)
+		err := database.InsertMeasurement(info)
+		if ( err != nil ) {
+			logger.Error("Cannot persist measurement")
+		}
+
 	}
 }
 
