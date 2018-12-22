@@ -4,3 +4,4 @@ port: 5432
 dbname: raspi_temp
 username: postgres
 password: postgres
+table-postfix: lala123

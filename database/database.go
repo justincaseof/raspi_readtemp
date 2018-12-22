@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"pitemp/logging"
 
 	/* blank-imported Postgres driver */
@@ -11,7 +10,6 @@ import (
 
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -29,6 +27,8 @@ type DBConfig struct {
 	DBname   string `yaml:"dbname"`
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
+	// a unique identifier for distinguishing individual database tables
+	TableIdentifier string `yaml:"table-postfix"`
 }
 
 // IInserteableMeasurement -- interface to define required methods of inserteable measurements.
@@ -37,22 +37,35 @@ type IInserteableMeasurement interface {
 	InserteableMeasurementUnit() string
 }
 
-var tableIdentifier string
-var dbconfig DBConfig
+var dbconfig *DBConfig
 var mydb *sql.DB
 var log = logging.NewDevLog("database")
 
 // Open -- Opens a database connection according to yaml file 'dbconfig.yml'
-func Open(tableIdentifierArg string) {
-	readConfig(&dbconfig)
-	initDatabase(tableIdentifierArg)
-	ensureTableExists()
+func Open(dbconfigArg *DBConfig) {
+	var err error
+	dbconfig = dbconfigArg
+	// fail hard in case of a stupid config
+	err = connectDatabase()
+	if err != nil {
+		panic(err)
+	}
+	// fail hard in case of a stupid config
+	err = ensureTableExists()
+	if err != nil {
+		panic(err)
+	}
 }
 
 // Close -- closes the given database connection
 func Close() {
 	if mydb != nil {
-		mydb.Close()
+		err := mydb.Close()
+		if err != nil {
+			log.Info("DB connection has been shut down gracefully")
+		} else {
+			log.Warn("Error closing DB connection")
+		}
 	}
 }
 
@@ -62,7 +75,7 @@ func InsertMeasurement(measurement IInserteableMeasurement) error {
 		zap.Float32("value", measurement.InserteableMeasurementValue()),
 		zap.String("unit", measurement.InserteableMeasurementUnit()))
 
-	tableName := "raspi_measurements_" + tableIdentifier
+	tableName := "raspi_measurements_" + dbconfig.TableIdentifier
 
 	statement := "INSERT INTO public." + tableName + " (measurement_timestamp, value, unit) " +
 		"VALUES (current_timestamp, $1, $2) RETURNING measurement_id"
@@ -84,45 +97,35 @@ func InsertMeasurement(measurement IInserteableMeasurement) error {
 	return nil
 }
 
-func initDatabase(tableIdentifierArg string) {
-	// store tableIdentifier. should be instance-unique in order to keep measurements of different devices apart.
-	tableIdentifier = tableIdentifierArg
-
+func connectDatabase() error {
 	// assemble CONNECT string
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	mydb = db
 
 	err = db.Ping()
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	log.Info("Successfully connected!")
-}
+	log.Info("Successfully connected to database.")
 
-func readConfig(dbconfig *DBConfig) {
-	var err error
-	var bytes []byte
-	bytes, err = ioutil.ReadFile("dbconfig.yml")
-	if err != nil {
-		panic(err)
-	}
-	err = yaml.Unmarshal(bytes, dbconfig)
-	if err != nil {
-		panic(err)
-	}
-	log.Info("DBConfig parsed.")
+	return nil
 }
 
 /**
 tableIdentifier should be the raspi's mac address
 */
 func ensureTableExists() error {
-	tableName := "raspi_measurements_" + tableIdentifier
+	// simple validation
+	if len(dbconfig.TableIdentifier) < 1 {
+		return errors.New("Cannot use empty table postfix.")
+	}
+
+	tableName := "raspi_measurements_" + dbconfig.TableIdentifier
 	_, err := mydb.Exec(
 		"CREATE TABLE IF NOT EXISTS public." + tableName +
 			`(
@@ -140,6 +143,8 @@ func ensureTableExists() error {
 		log.Error("Error executing CREATE TABLE statement")
 		return errors.New("Error executing CREATE TABLE statement")
 	}
+
+	log.Info("Successfully ensured existence of measurement table.", zap.String("tablename", tableName))
 
 	return nil
 }
