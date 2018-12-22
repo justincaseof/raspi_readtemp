@@ -3,12 +3,15 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
-	"go.uber.org/zap"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"pitemp/logging"
+
+	/* blank-imported Postgres driver */
+	_ "github.com/lib/pq"
+
+	"github.com/pkg/errors"
+	"go.uber.org/zap"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -19,6 +22,7 @@ const (
 	dbname   = "postgres"
 )
 
+// DBConfig -- Struct for yaml-based DB config
 type DBConfig struct {
 	Host     string `yaml:"host"`
 	Port     uint32 `yaml:"port"`
@@ -27,9 +31,10 @@ type DBConfig struct {
 	Password string `yaml:"password"`
 }
 
+// IInserteableMeasurement -- interface to define required methods of inserteable measurements.
 type IInserteableMeasurement interface {
 	InserteableMeasurementValue() float32
-	InserteableMeasurementUnit()  string
+	InserteableMeasurementUnit() string
 }
 
 var tableIdentifier string
@@ -37,41 +42,44 @@ var dbconfig DBConfig
 var mydb *sql.DB
 var log = logging.NewDevLog("database")
 
+// Open -- Opens a database connection according to yaml file 'dbconfig.yml'
 func Open(tableIdentifierArg string) {
 	readConfig(&dbconfig)
 	initDatabase(tableIdentifierArg)
 	ensureTableExists()
 }
 
+// Close -- closes the given database connection
 func Close() {
 	if mydb != nil {
 		mydb.Close()
 	}
 }
 
-func InsertMeasurement(measurement IInserteableMeasurement) (error) {
+// InsertMeasurement -- insert a measurement
+func InsertMeasurement(measurement IInserteableMeasurement) error {
 	log.Debug("Inserting meaurement ...",
 		zap.Float32("value", measurement.InserteableMeasurementValue()),
-		zap.String("unit", measurement.InserteableMeasurementUnit()) )
+		zap.String("unit", measurement.InserteableMeasurementUnit()))
 
 	tableName := "raspi_measurements_" + tableIdentifier
 
 	statement := "INSERT INTO public." + tableName + " (measurement_timestamp, value, unit) " +
-				 "VALUES (current_timestamp, $1, $2) RETURNING measurement_id"
+		"VALUES (current_timestamp, $1, $2) RETURNING measurement_id"
 	stmt, err := mydb.Prepare(statement)
 	defer stmt.Close()
 	if err != nil {
-		// FIXME: log!
+		log.Error("Error preparing statement.", zap.String("statement", statement), zap.Error(err))
 		return err
 	}
-	measurement_id := int64(0)
-	err = stmt.QueryRow(measurement.InserteableMeasurementValue(), measurement.InserteableMeasurementUnit()).Scan(&measurement_id)
-	if (err != nil) {
-		// FIXME: log!
+	measurementID := int64(0)
+	err = stmt.QueryRow(measurement.InserteableMeasurementValue(), measurement.InserteableMeasurementUnit()).Scan(&measurementID)
+	if err != nil {
+		log.Error("Error executing statement.", zap.Error(err))
 		return err
 	}
-	log.Info("Inserted measurement",
-		zap.Int64("measurement_id", measurement_id))
+	log.Info("Successfully inserted measurement.",
+		zap.Int64("measurement_id", measurementID))
 
 	return nil
 }
@@ -100,19 +108,19 @@ func readConfig(dbconfig *DBConfig) {
 	var err error
 	var bytes []byte
 	bytes, err = ioutil.ReadFile("dbconfig.yml")
-	if (err != nil) {
+	if err != nil {
 		panic(err)
 	}
 	err = yaml.Unmarshal(bytes, dbconfig)
-	if (err != nil) {
+	if err != nil {
 		panic(err)
 	}
 	log.Info("DBConfig parsed.")
 }
 
 /**
- tableIdentifier should be the raspi's mac address
- */
+tableIdentifier should be the raspi's mac address
+*/
 func ensureTableExists() error {
 	tableName := "raspi_measurements_" + tableIdentifier
 	_, err := mydb.Exec(
