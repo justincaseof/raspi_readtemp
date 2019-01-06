@@ -1,7 +1,7 @@
 type: postgres
 host: 127.0.0.1
 port: 5432
-dbname: raspi_temp
-username: postgres
-password: postgres
-table-postfix: lala123
+dbname: pitemp
+username: pitemp
+password: pitemp
+table-postfix: devtest
