@@ -1,0 +1,10 @@
+[Unit]
+Description=A service to read Raspberry Pi's Core temperature using the '/opt/vc/bin/vcgencmd' command
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/raspi_readtemp
+ExecStart=/opt/raspi_readtemp/raspi_readtemp
+
+[Install]
+WantedBy=multi-user.target
