@@ -4,9 +4,9 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
-	"pitemp/database"
-	"pitemp/logging"
-	"pitemp/readtemperature"
+	"raspi_readtemp/database"
+	"raspi_readtemp/logging"
+	"raspi_readtemp/readtemperature"
 	"syscall"
 	"time"
 
