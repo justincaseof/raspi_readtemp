@@ -3,7 +3,7 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"pitemp/logging"
+	"raspi_readtemp/logging"
 
 	/* blank-imported Postgres driver */
 	_ "github.com/lib/pq"
