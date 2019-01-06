@@ -136,7 +136,7 @@ func ensureTableExists() error {
 	`)
 
 	if err != nil {
-		logger.Error("Error executing CREATE TABLE statement")
+		logger.Error("Error executing CREATE TABLE statement", zap.Error(err))
 		return errors.New("Error executing CREATE TABLE statement")
 	}
 
