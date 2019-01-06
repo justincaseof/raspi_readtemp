@@ -20,7 +20,7 @@ type DBConfig struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
 	// a unique identifier for distinguishing individual database tables
-	TableIdentifier string `yaml:"table-postfix"`
+	TableIdentifier string `yaml:"instance-id"`
 }
 
 // IInserteableMeasurement -- interface to define required methods of inserteable measurements.
@@ -69,16 +69,19 @@ func InsertMeasurement(measurement IInserteableMeasurement) error {
 
 	tableName := "raspi_measurements_" + dbconfig.TableIdentifier
 
-	statement := "INSERT INTO public." + tableName + " (measurement_timestamp, value, unit) " +
-		"VALUES (current_timestamp, $1, $2) RETURNING measurement_id"
+	statement := "INSERT INTO public." + tableName + " (instance_id, measurement_timestamp, value, unit) " +
+		"VALUES ($1, current_timestamp, $2, $3) RETURNING measurement_id"
 	stmt, err := mydb.Prepare(statement)
 	defer stmt.Close()
 	if err != nil {
 		logger.Error("Error preparing statement.", zap.String("statement", statement), zap.Error(err))
 		return err
 	}
+
+	// a pointer to store the returned id
 	measurementID := int64(0)
-	err = stmt.QueryRow(measurement.InserteableMeasurementValue(), measurement.InserteableMeasurementUnit()).Scan(&measurementID)
+
+	err = stmt.QueryRow(dbconfig.TableIdentifier, measurement.InserteableMeasurementValue(), measurement.InserteableMeasurementUnit()).Scan(&measurementID)
 	if err != nil {
 		logger.Error("Error executing statement.", zap.Error(err))
 		return err
@@ -129,6 +132,7 @@ func ensureTableExists() error {
 			measurement_timestamp timestamp with time zone,
 			value numeric NOT NULL,
 			unit character varying(255) NOT NULL,
+			instance_id character varying(255) NOT NULL,
 			PRIMARY KEY (measurement_id)
 		) WITH (
 			OIDS = FALSE
