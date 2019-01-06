@@ -39,7 +39,7 @@ type IInserteableMeasurement interface {
 
 var dbconfig *DBConfig
 var mydb *sql.DB
-var log = logging.NewDevLog("database")
+var logger = logging.NewDevLog("database")
 
 // Open -- Opens a database connection according to yaml file 'dbconfig.yml'
 func Open(dbconfigArg *DBConfig) {
@@ -62,16 +62,16 @@ func Close() {
 	if mydb != nil {
 		err := mydb.Close()
 		if err != nil {
-			log.Info("DB connection has been shut down gracefully")
+			logger.Info("DB connection has been shut down gracefully")
 		} else {
-			log.Warn("Error closing DB connection")
+			logger.Warn("Error closing DB connection")
 		}
 	}
 }
 
 // InsertMeasurement -- insert a measurement
 func InsertMeasurement(measurement IInserteableMeasurement) error {
-	log.Debug("Inserting meaurement ...",
+	logger.Debug("Inserting meaurement ...",
 		zap.Float32("value", measurement.InserteableMeasurementValue()),
 		zap.String("unit", measurement.InserteableMeasurementUnit()))
 
@@ -82,16 +82,16 @@ func InsertMeasurement(measurement IInserteableMeasurement) error {
 	stmt, err := mydb.Prepare(statement)
 	defer stmt.Close()
 	if err != nil {
-		log.Error("Error preparing statement.", zap.String("statement", statement), zap.Error(err))
+		logger.Error("Error preparing statement.", zap.String("statement", statement), zap.Error(err))
 		return err
 	}
 	measurementID := int64(0)
 	err = stmt.QueryRow(measurement.InserteableMeasurementValue(), measurement.InserteableMeasurementUnit()).Scan(&measurementID)
 	if err != nil {
-		log.Error("Error executing statement.", zap.Error(err))
+		logger.Error("Error executing statement.", zap.Error(err))
 		return err
 	}
-	log.Info("Successfully inserted measurement.",
+	logger.Info("Successfully inserted measurement.",
 		zap.Int64("measurement_id", measurementID))
 
 	return nil
@@ -101,7 +101,7 @@ func connectDatabase() error {
 	// assemble CONNECT string
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 
-	log.Info("Connecting to postgres db", zap.String("connection-string", psqlInfo))
+	logger.Info("Connecting to postgres db", zap.String("connection-string", psqlInfo))
 
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
@@ -114,7 +114,7 @@ func connectDatabase() error {
 		return err
 	}
 
-	log.Info("Successfully connected to database.")
+	logger.Info("Successfully connected to database.")
 
 	return nil
 }
@@ -143,11 +143,11 @@ func ensureTableExists() error {
 	`)
 
 	if err != nil {
-		log.Error("Error executing CREATE TABLE statement")
+		logger.Error("Error executing CREATE TABLE statement")
 		return errors.New("Error executing CREATE TABLE statement")
 	}
 
-	log.Info("Successfully ensured existence of measurement table.", zap.String("tablename", tableName))
+	logger.Info("Successfully ensured existence of measurement table.", zap.String("tablename", tableName))
 
 	return nil
 }
