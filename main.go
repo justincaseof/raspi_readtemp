@@ -10,12 +10,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/apex/log"
 	"go.uber.org/zap"
 	yaml "gopkg.in/yaml.v2"
 )
 
 var logger = logging.New("pitemp", false)
+const DB_CONFIG_FILENAME = "dbconfig.yml"
+
 var temperatureInfoChannel = make(chan readtemperature.TemperatureInfo)
 
 func main() {
@@ -44,15 +45,16 @@ func main() {
 func readDatabaseConfig(dbconfig *database.DBConfig) {
 	var err error
 	var bytes []byte
-	bytes, err = ioutil.ReadFile("dbconfig.yml")
+	bytes, err = ioutil.ReadFile(DB_CONFIG_FILENAME)
 	if err != nil {
+		logger.Error("Cannot open config file", zap.String("filename", DB_CONFIG_FILENAME))
 		panic(err)
 	}
 	err = yaml.Unmarshal(bytes, dbconfig)
 	if err != nil {
 		panic(err)
 	}
-	log.Info("DBConfig parsed.")
+	logger.Info("DBConfig parsed.")
 }
 
 func temperaturePrinter() {

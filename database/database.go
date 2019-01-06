@@ -12,14 +12,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	host     = "127.0.0.1"
-	port     = 5432
-	user     = "postgres"
-	password = "postgres"
-	dbname   = "postgres"
-)
-
 // DBConfig -- Struct for yaml-based DB config
 type DBConfig struct {
 	Host     string `yaml:"host"`
@@ -99,7 +91,8 @@ func InsertMeasurement(measurement IInserteableMeasurement) error {
 
 func connectDatabase() error {
 	// assemble CONNECT string
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+		dbconfig.Host, dbconfig.Port, dbconfig.Username, dbconfig.Password, dbconfig.DBname)
 
 	logger.Info("Connecting to postgres db", zap.String("connection-string", psqlInfo))
 
