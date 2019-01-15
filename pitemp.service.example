@@ -4,6 +4,8 @@ After=network.target
 
 [Service]
 WorkingDirectory=/opt/pitemp
+Restart=always
+RestartSec=10
 ExecStart=/opt/pitemp/pitemp
 
 [Install]
